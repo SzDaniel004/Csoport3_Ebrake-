@@ -29,15 +29,21 @@ void BehaviorNode::evaluate_brake_decision()
 {
   bool previous_state = should_brake_;
 
-  // if the object is detected and within the brake distance 
-  if (object_distance_ > 0 && object_distance_ <= brake_distance_)
-  {
-    should_brake_ = true;
-  }
-  else
-  {
-    should_brake_ = false;
-  }
+  // Hard limit és sima fékezés elkülönítése
+    if (object_distance_ > 0 && object_distance_ <= (brake_distance_ * 0.4)) 
+    {
+        should_brake_ = true;
+        RCLCPP_WARN(this->get_logger(), "!!! HARD LIMIT AKTÍV - VÉSZFÉKEZÉS !!!");
+    }
+    else if (object_distance_ > 0 && object_distance_ <= brake_distance_)
+    {
+        should_brake_ = true;
+        RCLCPP_INFO(this->get_logger(), "Sima fékezés aktív");
+    }
+    else 
+    {
+        should_brake_ = false;
+    }
 
   // we only publish if the brake command has changed or if there is an object detected
   if (should_brake_ != previous_state || object_distance_ > 0)
