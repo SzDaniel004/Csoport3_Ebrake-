@@ -28,6 +28,7 @@ private:
   double calculated_brake_distance_ = 0.0;
   double actual_distance_ = 100.0;
   bool should_brake_ = false;
+  bool emergency_triggered_ = false;
 
   // Callback függvények
   void brake_distance_callback(const std_msgs::msg::Float32::SharedPtr msg);

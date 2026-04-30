@@ -24,52 +24,61 @@ void BehaviorNode::brake_distance_callback(const std_msgs::msg::Float32::SharedP
 
 void BehaviorNode::scenario_callback(const crp_msgs::msg::Scenario::SharedPtr msg)
 {
-  // Megkeressük a legközelebbi objektumot a szimulátor üzenetéből
   if (!msg->local_moving_objects.objects.empty()) 
   {
-    // A Simulator.cpp base_link-ben adja meg, az X a távolságunk
     actual_distance_ = msg->local_moving_objects.objects[0].kinematics.initial_pose_with_covariance.pose.position.x;
   } 
   else 
   {
-    actual_distance_ = 100.0; // Ha nincs akadály, legyen messze
-  }
+    actual_distance_ = 100.0;
   check_safety();
 }
 
 void BehaviorNode::check_safety()
 {
   auto brake_msg = std_msgs::msg::Bool();
-  tier4_planning_msgs::msg::Scenario strategy_msg; // Az új típus
+  tier4_planning_msgs::msg::Scenario strategy_msg;
 
-  if (actual_distance_ < 5.0 || actual_distance_ < (calculated_brake_distance_))
+  if (actual_distance_ < 5.0 || actual_distance_ < calculated_brake_distance_)
   {
     strategy_msg.current_scenario = "longEmergencyImpact";
     brake_msg.data = true;
     should_brake_ = true;
+    emergency_triggered_ = true;
   }
-  else if (actual_distance_ < (calculated_brake_distance_ + 10.0))
+  else if (actual_distance_ < (calculated_brake_distance_ + 5.0))
   {
     strategy_msg.current_scenario = "longEmergencyAvoid";
     brake_msg.data = true;
     should_brake_ = true;
-  }
-  else if (actual_distance_ < (calculated_brake_distance_ + 20.0))
+    emergency_triggered_ = true; 
+  else if (actual_distance_ < (calculated_brake_distance_ + 10.0))
   {
-    strategy_msg.current_scenario = "warningLevel";
-    brake_msg.data = false;
-    should_brake_ = false;
+    if (emergency_triggered_)
+    {
+      strategy_msg.current_scenario = "longEmergencyAvoid";
+      brake_msg.data = true;
+      should_brake_ = true;
+    }
+    else
+    {
+      strategy_msg.current_scenario = "warningLevel";
+      brake_msg.data = false;
+      should_brake_ = false;
+    }
   }
   else
   {
     strategy_msg.current_scenario = "noAction";
     brake_msg.data = false;
     should_brake_ = false;
+    emergency_triggered_ = false;
   }
 
   brake_command_publisher_->publish(brake_msg);
   strategy_publisher_->publish(strategy_msg);
 }
+
 
 int main(int argc, char * argv[])
 {
